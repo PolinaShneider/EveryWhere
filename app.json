@@ -17,8 +17,7 @@
     },
     "updates": {
       "enabled": true,
-      "fallbackToCacheTimeout": 10000,
-      "url": "https://u.expo.dev/1650611b-a5b8-4420-9656-60c06429edd4"
+      "fallbackToCacheTimeout": 10000
     },
     "assetBundlePatterns": [
       "**/*"
@@ -58,11 +57,8 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "1650611b-a5b8-4420-9656-60c06429edd4"
+        "projectId": "2f7b2f66-c9b7-4ea4-b5d8-ed72e78c88f7"
       }
-    },
-    "runtimeVersion": {
-      "policy": "appVersion"
     }
   }
 }

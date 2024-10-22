@@ -122,6 +122,11 @@ export default function Home() {
           onPress={() => onNotificationPress()}
           disable={!token}
         />
+        <Button
+          label='Open Map'
+          color={colors.primary}
+          onPress={() => navigation.navigate('MapComponent', {screen: "Map"})}
+        />
       </ScrollView>
     </ScreenTemplate>
   )
