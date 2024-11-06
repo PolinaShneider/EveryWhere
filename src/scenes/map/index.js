@@ -1,73 +1,64 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Alert } from 'react-native';
-import MapView, { Marker, Polygon } from 'react-native-maps';
-import * as Location from 'expo-location';
+import React, { useState, useEffect } from 'react'
+import { StyleSheet, View, Alert } from 'react-native'
+import MapView, { Marker, Polyline } from 'react-native-maps'
+import * as Location from 'expo-location'
+import { startLocationTracking } from './locationTracker'
 
 export default function Map() {
-  const [location, setLocation] = useState(null);
-  const [errorMsg, setErrorMsg] = useState(null);
-  let locationSubscription = null;
+  const [location, setLocation] = useState(null)
+  const [errorMsg, setErrorMsg] = useState(null)
+  const [trail, setTrail] = useState([])
 
   useEffect(() => {
-    let subscription;
-
     (async () => {
-      // Запрос разрешений на использование геолокации
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setErrorMsg('Permission to access location was denied');
-        Alert.alert('Error', 'Permission to access location was denied');
-        return;
+      const { status: foregroundStatus } =
+        await Location.requestForegroundPermissionsAsync()
+     // const { status: backgroundStatus } =
+       // await Location.requestBackgroundPermissionsAsync()
+      if (foregroundStatus !== 'granted') {
+        setErrorMsg('Permission to access location was denied')
+        Alert.alert('Необходимо разрешение на доступ к местоположению')
+        return false
       }
 
-      // Получение текущего местоположения
-      let currentLocation = await Location.getCurrentPositionAsync({});
+      let currentLocation = await Location.getCurrentPositionAsync({})
       setLocation({
         latitude: currentLocation.coords.latitude,
         longitude: currentLocation.coords.longitude,
-        latitudeDelta: 0.0922,
-        longitudeDelta: 0.0421,
-      });
+        latitudeDelta: 0.001, // Сильный зум
+        longitudeDelta: 0.001,
+      })
 
-      // Отслеживание местоположения в реальном времени
-      subscription = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.High,
-          timeInterval: 5000, // Обновление каждые 5 секунд
-          distanceInterval: 10, // Обновление при изменении позиции на 10 метров
-        },
-        (newLocation) => {
-          setLocation({
-            latitude: newLocation.coords.latitude,
-            longitude: newLocation.coords.longitude,
-            latitudeDelta: 0.0922,
-            longitudeDelta: 0.0421,
-          });
-        }
-      );
-    })();
+      startLocationTracking()
 
-    // Очистка подписки на изменения местоположения при размонтировании компонента
-    return () => {
-      if (subscription) {
-        subscription.remove();
-      }
-    };
-  }, []);
+      // Генерация мок-данных для маршрута
+      const generatedTrail = generateMockTrail(
+        { latitude: 53.35128152764529, longitude: -6.278811700551221 }, // Начальная точка
+        100, // Интервал в метрах
+        36, // Количество точек
+      )
+      setTrail(generatedTrail)
+    })()
+  }, [])
 
-  // Предопределенные метки на карте
-  const markers = [
-    { id: 1, latitude: 37.78825, longitude: -122.4324, title: 'Location 1' },
-    { id: 2, latitude: 37.75825, longitude: -122.4524, title: 'Location 2' },
-  ];
+  // Функция для генерации точек маршрута
+  const generateMockTrail = (startPoint, distanceMeters, pointsCount) => {
+    const trail = [startPoint]
+    let { latitude, longitude } = startPoint
 
-  const polygonCoords = [
-    { latitude: 53.349805, longitude: -6.26031 }, // Центральная часть Дублина
-    { latitude: 53.355, longitude: -6.245 }, // Северо-восточная часть
-    { latitude: 53.345, longitude: -6.270 }, // Южная часть
-    { latitude: 53.350, longitude: -6.280 }, // Западная часть
-    { latitude: 53.355, longitude: -6.265 }, // Северо-западная часть
-  ];
+    for (let i = 1; i < pointsCount; i++) {
+      // Примерная конвертация метров в градусы
+      const deltaLat = distanceMeters / 111320 // 1 градус широты ≈ 111.32 км
+      const deltaLng =
+        distanceMeters / (111320 * Math.cos(latitude * (Math.PI / 180))) // Учитываем широту для долготы
+
+      latitude += deltaLat
+      longitude += deltaLng
+
+      trail.push({ latitude, longitude })
+    }
+    return trail
+  }
 
   return (
     <View style={styles.container}>
@@ -76,34 +67,19 @@ export default function Map() {
           style={styles.map}
           initialRegion={location}
           showsUserLocation={true}
-          followsUserLocation={true}
         >
-          {/* Маркер текущего местоположения пользователя */}
-          <Marker coordinate={location} title="You are here" />
+          <Marker coordinate={location} title="You are here now" />
 
-          {/* Дополнительные маркеры */}
-          {markers.map((marker) => (
-            <Marker
-              key={marker.id}
-              coordinate={{
-                latitude: marker.latitude,
-                longitude: marker.longitude,
-              }}
-              title={marker.title}
-            />
-          ))}
-
-          {/* Полигон для закрашивания области */}
-          <Polygon
-            coordinates={polygonCoords}
-            fillColor="rgba(0, 200, 0, 0.3)" // Заливка региона с прозрачностью
-            strokeColor="rgba(0, 0, 0, 0.5)" // Цвет границы полигона
-            strokeWidth={2} // Ширина границы
+          {/* Линия для отображения маршрута */}
+          <Polyline
+            coordinates={trail}
+            strokeColor="rgba(0, 200, 0, 0.5)"
+            strokeWidth={3}
           />
         </MapView>
       ) : null}
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -116,4 +92,4 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-});
+})
